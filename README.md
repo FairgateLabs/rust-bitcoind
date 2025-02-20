@@ -1,4 +1,4 @@
-# rust-bitcoind
+# Rust Bitcoin Docker
 
 A Rust library for managing a Bitcoin Core node in a Docker container.
 
