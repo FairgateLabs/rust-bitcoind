@@ -151,6 +151,7 @@ impl Bitcoind {
                 ..Default::default()
             }),
             cmd: Some(vec![
+                "-debug".to_string(),
                 "-regtest=1".to_string(),
                 "-printtoconsole".to_string(),
                 "-rpcallowip=0.0.0.0/0".to_string(),
