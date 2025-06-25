@@ -15,16 +15,35 @@ pub struct Bitcoind {
     image: String,
     runtime: Runtime,
     rpc_config: RpcConfig,
+    flags: Option<RpcFlags>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RpcFlags {
+    pub min_relay_tx_fee: Option<f64>,
+    pub block_mint_tx_fee: Option<f64>,
+    pub debug: Option<u8>,
+    pub fallback_fee: Option<f64>,
 }
 
 impl Bitcoind {
     pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
+        Self::new_with_flags(container_name, image, rpc_config, None)
+    }
+
+    pub fn new_with_flags(
+        container_name: &str,
+        image: &str,
+        rpc_config: RpcConfig,
+        flags: Option<RpcFlags>,
+    ) -> Self {
         Bitcoind {
             docker: Docker::connect_with_local_defaults().unwrap(),
             container_name: container_name.to_string(),
             image: image.to_string(),
             runtime: Runtime::new().unwrap(),
             rpc_config,
+            flags,
         }
     }
 
@@ -130,6 +149,36 @@ impl Bitcoind {
 
     async fn create_and_start_container(&self) -> Result<(), Error> {
         info!("Creating and starting bitcoind container");
+
+        let min_relay_tx_fee = format!(
+            "-minrelaytxfee={}",
+            self.flags
+                .as_ref()
+                .and_then(|f| f.min_relay_tx_fee)
+                .unwrap_or(0.00001)
+        );
+
+        let block_min_tx_fee = format!(
+            "-blockmintxfee={}",
+            self.flags
+                .as_ref()
+                .and_then(|f| f.block_mint_tx_fee)
+                .unwrap_or(0.00001)
+        );
+
+        let debug = format!(
+            "-debug={}",
+            self.flags.as_ref().and_then(|f| f.debug).unwrap_or(1)
+        );
+
+        let fallback_fee = format!(
+            "-fallbackfee={}",
+            self.flags
+                .as_ref()
+                .and_then(|f| f.fallback_fee)
+                .unwrap_or(0.0002)
+        );
+
         let config = Config {
             image: Some(self.image.clone()),
             env: Some(vec!["BITCOIN_DATA=/data".to_string()]),
@@ -160,7 +209,10 @@ impl Bitcoind {
                 format!("-rpcpassword={}", self.rpc_config.password).to_string(),
                 "-server=1".to_string(),
                 "-txindex=1".to_string(),
-                "-fallbackfee=0.0002".to_string(),
+                debug,
+                min_relay_tx_fee,
+                block_min_tx_fee,
+                fallback_fee,
             ]),
             ..Default::default()
         };
