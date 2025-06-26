@@ -15,20 +15,20 @@ pub struct Bitcoind {
     image: String,
     runtime: Runtime,
     rpc_config: RpcConfig,
-    flags: RpcFlags,
+    flags: BitcoindFlags,
 }
 
 #[derive(Debug, Clone)]
-pub struct RpcFlags {
+pub struct BitcoindFlags {
     pub min_relay_tx_fee: f64,
     pub block_min_tx_fee: f64,
     pub debug: u8,
     pub fallback_fee: f64,
 }
 
-impl Default for RpcFlags {
+impl Default for BitcoindFlags {
     fn default() -> Self {
-        RpcFlags {
+        BitcoindFlags {
             min_relay_tx_fee: 0.00001,
             block_min_tx_fee: 0.00001,
             debug: 1,
@@ -39,14 +39,14 @@ impl Default for RpcFlags {
 
 impl Bitcoind {
     pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
-        Self::new_with_flags(container_name, image, rpc_config, RpcFlags::default())
+        Self::new_with_flags(container_name, image, rpc_config, BitcoindFlags::default())
     }
 
     pub fn new_with_flags(
         container_name: &str,
         image: &str,
         rpc_config: RpcConfig,
-        flags: RpcFlags,
+        flags: BitcoindFlags,
     ) -> Self {
         Bitcoind {
             docker: Docker::connect_with_local_defaults().unwrap(),
