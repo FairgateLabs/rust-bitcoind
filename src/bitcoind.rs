@@ -15,16 +15,46 @@ pub struct Bitcoind {
     image: String,
     runtime: Runtime,
     rpc_config: RpcConfig,
+    flags: BitcoindFlags,
+}
+
+#[derive(Debug, Clone)]
+pub struct BitcoindFlags {
+    pub min_relay_tx_fee: f64,
+    pub block_min_tx_fee: f64,
+    pub debug: u8,
+    pub fallback_fee: f64,
+}
+
+impl Default for BitcoindFlags {
+    fn default() -> Self {
+        BitcoindFlags {
+            min_relay_tx_fee: 0.00001,
+            block_min_tx_fee: 0.00001,
+            debug: 1,
+            fallback_fee: 0.0002,
+        }
+    }
 }
 
 impl Bitcoind {
     pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
+        Self::new_with_flags(container_name, image, rpc_config, BitcoindFlags::default())
+    }
+
+    pub fn new_with_flags(
+        container_name: &str,
+        image: &str,
+        rpc_config: RpcConfig,
+        flags: BitcoindFlags,
+    ) -> Self {
         Bitcoind {
             docker: Docker::connect_with_local_defaults().unwrap(),
             container_name: container_name.to_string(),
             image: image.to_string(),
             runtime: Runtime::new().unwrap(),
             rpc_config,
+            flags,
         }
     }
 
@@ -130,6 +160,12 @@ impl Bitcoind {
 
     async fn create_and_start_container(&self) -> Result<(), Error> {
         info!("Creating and starting bitcoind container");
+
+        let min_relay_tx_fee = format!("-minrelaytxfee={}", self.flags.min_relay_tx_fee);
+        let block_min_tx_fee = format!("-blockmintxfee={}", self.flags.block_min_tx_fee);
+        let debug = format!("-debug={}", self.flags.debug);
+        let fallback_fee = format!("-fallbackfee={}", self.flags.fallback_fee);
+
         let config = Config {
             image: Some(self.image.clone()),
             env: Some(vec!["BITCOIN_DATA=/data".to_string()]),
@@ -160,7 +196,10 @@ impl Bitcoind {
                 format!("-rpcpassword={}", self.rpc_config.password).to_string(),
                 "-server=1".to_string(),
                 "-txindex=1".to_string(),
-                "-fallbackfee=0.0002".to_string(),
+                debug,
+                min_relay_tx_fee,
+                block_min_tx_fee,
+                fallback_fee,
             ]),
             ..Default::default()
         };
