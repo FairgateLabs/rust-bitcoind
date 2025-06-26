@@ -15,27 +15,38 @@ pub struct Bitcoind {
     image: String,
     runtime: Runtime,
     rpc_config: RpcConfig,
-    flags: Option<RpcFlags>,
+    flags: RpcFlags,
 }
 
 #[derive(Debug, Clone)]
 pub struct RpcFlags {
-    pub min_relay_tx_fee: Option<f64>,
-    pub block_mint_tx_fee: Option<f64>,
-    pub debug: Option<u8>,
-    pub fallback_fee: Option<f64>,
+    pub min_relay_tx_fee: f64,
+    pub block_min_tx_fee: f64,
+    pub debug: u8,
+    pub fallback_fee: f64,
+}
+
+impl Default for RpcFlags {
+    fn default() -> Self {
+        RpcFlags {
+            min_relay_tx_fee: 0.00001,
+            block_min_tx_fee: 0.00001,
+            debug: 1,
+            fallback_fee: 0.0002,
+        }
+    }
 }
 
 impl Bitcoind {
     pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
-        Self::new_with_flags(container_name, image, rpc_config, None)
+        Self::new_with_flags(container_name, image, rpc_config, RpcFlags::default())
     }
 
     pub fn new_with_flags(
         container_name: &str,
         image: &str,
         rpc_config: RpcConfig,
-        flags: Option<RpcFlags>,
+        flags: RpcFlags,
     ) -> Self {
         Bitcoind {
             docker: Docker::connect_with_local_defaults().unwrap(),
@@ -150,34 +161,10 @@ impl Bitcoind {
     async fn create_and_start_container(&self) -> Result<(), Error> {
         info!("Creating and starting bitcoind container");
 
-        let min_relay_tx_fee = format!(
-            "-minrelaytxfee={}",
-            self.flags
-                .as_ref()
-                .and_then(|f| f.min_relay_tx_fee)
-                .unwrap_or(0.00001)
-        );
-
-        let block_min_tx_fee = format!(
-            "-blockmintxfee={}",
-            self.flags
-                .as_ref()
-                .and_then(|f| f.block_mint_tx_fee)
-                .unwrap_or(0.00001)
-        );
-
-        let debug = format!(
-            "-debug={}",
-            self.flags.as_ref().and_then(|f| f.debug).unwrap_or(1)
-        );
-
-        let fallback_fee = format!(
-            "-fallbackfee={}",
-            self.flags
-                .as_ref()
-                .and_then(|f| f.fallback_fee)
-                .unwrap_or(0.0002)
-        );
+        let min_relay_tx_fee = format!("-minrelaytxfee={}", self.flags.min_relay_tx_fee);
+        let block_min_tx_fee = format!("-blockmintxfee={}", self.flags.block_min_tx_fee);
+        let debug = format!("-debug={}", self.flags.debug);
+        let fallback_fee = format!("-fallbackfee={}", self.flags.fallback_fee);
 
         let config = Config {
             image: Some(self.image.clone()),
