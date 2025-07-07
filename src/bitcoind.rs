@@ -38,10 +38,25 @@ impl Default for BitcoindFlags {
 }
 
 impl Bitcoind {
+    /// Creates a new `Bitcoind` instance with default flags.
+    ///
+    /// # Arguments
+    ///
+    /// * `container_name` - The name of the Docker container.
+    /// * `image` - The Docker image to use.
+    /// * `rpc_config` - The RPC configuration for the Bitcoin node.
     pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
         Self::new_with_flags(container_name, image, rpc_config, BitcoindFlags::default())
     }
 
+    /// Creates a new `Bitcoind` instance with specified flags.
+    ///
+    /// # Arguments
+    ///
+    /// * `container_name` - The name of the Docker container.
+    /// * `image` - The Docker image to use.
+    /// * `rpc_config` - The RPC configuration for the Bitcoin node.
+    /// * `flags` - Custom flags for the Bitcoin node.
     pub fn new_with_flags(
         container_name: &str,
         image: &str,
@@ -58,6 +73,16 @@ impl Bitcoind {
         }
     }
 
+    /// Starts the `bitcoind` Docker container.
+    ///
+    /// This method checks if the Docker daemon is active and then attempts to start
+    /// the `bitcoind` container. If the container image is not found, it will pull
+    /// the image and retry starting the container.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the container starts successfully.
+    /// * `Err(Error)` if there is an error starting the container.
     pub fn start(&self) -> Result<(), Error> {
         info!("Checking if Docker daemon is active");
         let ping_result = self.runtime.block_on(async { self.docker.ping().await });
@@ -89,6 +114,23 @@ impl Bitcoind {
         })
     }
 
+    /// Stops the `bitcoind` Docker container.
+    ///
+    /// This method stops the running `bitcoind` container by calling the internal
+    /// stop method.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` if the container stops successfully.
+    /// * `Err(Error)` if there is an error stopping the container.
+    pub fn stop(&self) -> Result<(), Error> {
+        info!("Stopping bitcoind container");
+        self.runtime.block_on(async {
+            self.internal_stop().await?;
+            Ok(())
+        })
+    }
+
     async fn internal_stop(&self) -> Result<(), Error> {
         if self.is_running().await? {
             info!("Container was running. Stopping bitcoind container");
@@ -110,14 +152,6 @@ impl Bitcoind {
             }
         }
         Ok(())
-    }
-
-    pub fn stop(&self) -> Result<(), Error> {
-        info!("Stopping bitcoind container");
-        self.runtime.block_on(async {
-            self.internal_stop().await?;
-            Ok(())
-        })
     }
 
     async fn is_running(&self) -> Result<bool, Error> {
@@ -214,6 +248,66 @@ impl Bitcoind {
             .await?;
         self.docker.start_container::<String>(&id, None).await?;
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use bitcoin::Network;
+
+    use super::*;
+
+    #[test]
+    fn test_start_stop_bitcoind() -> Result<(), Error> {
+        let rpc_config = RpcConfig {
+            username: "foo".to_string(),
+            password: "rpcpassword".to_string(),
+            url: "http://localhost:18443".to_string(),
+            wallet: "mywallet".to_string(),
+            network: Network::Regtest,
+        };
+
+        let bitcoind = Bitcoind::new(
+            "bitcoin-regtest",
+            "ruimarinho/bitcoin-core",
+            rpc_config.clone(),
+        );
+
+        bitcoind.start()?;
+        bitcoind.stop()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_start_stop_bitcoind_with_flags() -> Result<(), Error> {
+        let rpc_config = RpcConfig {
+            username: "foo".to_string(),
+            password: "rpcpassword".to_string(),
+            url: "http://localhost:18443".to_string(),
+            wallet: "mywallet".to_string(),
+            network: Network::Regtest,
+        };
+
+        let flags = BitcoindFlags {
+            min_relay_tx_fee: 0.00001,
+            block_min_tx_fee: 0.00001,
+            debug: 1,
+            fallback_fee: 0.0002,
+        };
+
+        let bitcoind = Bitcoind::new_with_flags(
+            "bitcoin-regtest",
+            "ruimarinho/bitcoin-core",
+            rpc_config.clone(),
+            flags,
+        );
+
+        bitcoind.start()?;
+        bitcoind.stop()?;
+
         Ok(())
     }
 }
