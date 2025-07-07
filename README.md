@@ -11,25 +11,80 @@ A Rust library for managing a Bitcoin Core node in a Docker container.
 
 
 
-## Methods
+## Usage
 
-The `Bitcoind` struct provides several methods to manage a Bitcoin Core node within a Docker container:
+### Basic Usage
 
-- **new**
-  Creates a new `Bitcoind` instance with default flags.
+```rust
+use bitcoind::{Bitcoind, BitcoindFlags};
+use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
+use bitcoin::Network;
 
-- **new_with_flags**
-  Creates a new `Bitcoind` instance with specified flags.
+// Configure RPC settings
+let rpc_config = RpcConfig {
+    username: "bitcoin".to_string(),
+    password: "password".to_string(),
+    url: "http://localhost:18443".to_string(),
+    wallet: "default".to_string(),
+    network: Network::Regtest,
+};
 
-- **start**
-  Starts the `Bitcoind` Docker container. It checks if the Docker daemon is active and attempts to start the container. If the image is not found, it will pull the image and retry.
+// Create a new Bitcoin Core instance
+let bitcoind = Bitcoind::new("my-bitcoin-node", "ruimarinho/bitcoin-core", rpc_config)?;
 
-- **stop**
-  Stops the `Bitcoind` Docker container.
+// Start the container
+bitcoind.start().await?;
 
- 
+// Your Bitcoin operations here...
+println!("Bitcoin Core node is running!");
 
+// Stop the container
+bitcoind.stop().await?;
 
+```
+
+### Custom Configuration
+
+```rust
+use bitcoind::{Bitcoind, BitcoindFlags};
+use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
+use bitcoin::Network;
+use std::time::Duration;
+
+let rpc_config = RpcConfig {
+    username: "bitcoin".to_string(),
+    password: "password".to_string(),
+    url: "http://localhost:18443".to_string(),
+    wallet: "default".to_string(),
+    network: Network::Regtest,
+};
+
+let flags = BitcoindFlags {
+    min_relay_tx_fee: 0.00001,
+    block_min_tx_fee: 0.00001,
+    debug: 2,
+    fallback_fee: 0.0002,
+};
+
+let bitcoind = Bitcoind::new_with_flags("my-node", "ruimarinho/bitcoin-core", rpc_config, flags);
+```
+
+## Configuration
+
+### Bitcoind Flags
+
+| Field | Description | Default |
+|-------|-------------|---------|
+| `min_relay_tx_fee` | Minimum relay transaction fee (in BTC) | `0.00001` |
+| `block_min_tx_fee` | Minimum transaction fee for block inclusion (in BTC) | `0.00001` |
+| `debug` | Debug level | `0` |
+| `fallback_fee` | Fallback fee (in BTC) | `0.0002` |
+
+### Development Setup
+
+1. Clone the repository
+2. Install dependencies: `cargo build`
+3. Run tests: `cargo test`
 
 
 
