@@ -3,13 +3,11 @@
 A Rust library for managing a Bitcoin Core node in a Docker container.
 
 ## Features
-- Start and manage Bitcoin Core nodes in regtest mode
-- Docker container lifecycle management (create, start, stop, cleanup)
-- Error handling and container state management
-- Automatic image pulling
-- Configurable container and Bitcoin Core settings
-
-
+- 🚀 Start and manage Bitcoin Core nodes in regtest mode
+- 🐳 Docker container lifecycle management (create, start, stop, cleanup)
+- ⚠️ Error handling and container state management
+- 📥 Automatic image pulling
+- ⚙️ Configurable container and Bitcoin Core settings
 
 ## Usage
 
@@ -33,13 +31,13 @@ let rpc_config = RpcConfig {
 let bitcoind = Bitcoind::new("my-bitcoin-node", "ruimarinho/bitcoin-core", rpc_config)?;
 
 // Start the container
-bitcoind.start().await?;
+bitcoind.start()?;
 
 // Your Bitcoin operations here...
 println!("Bitcoin Core node is running!");
 
 // Stop the container
-bitcoind.stop().await?;
+bitcoind.stop()?;
 
 ```
 
@@ -60,16 +58,14 @@ let rpc_config = RpcConfig {
 };
 
 let flags = BitcoindFlags {
-    min_relay_tx_fee: 0.00001,
-    block_min_tx_fee: 0.00001,
-    debug: 2,
+    min_relay_tx_fee: 0.00003,
+    block_min_tx_fee: 0.00004,
+    debug: 0,
     fallback_fee: 0.0002,
 };
 
 let bitcoind = Bitcoind::new_with_flags("my-node", "ruimarinho/bitcoin-core", rpc_config, flags);
 ```
-
-## Configuration
 
 ### Bitcoind Flags
 
@@ -77,18 +73,11 @@ let bitcoind = Bitcoind::new_with_flags("my-node", "ruimarinho/bitcoin-core", rp
 |-------|-------------|---------|
 | `min_relay_tx_fee` | Minimum relay transaction fee (in BTC) | `0.00001` |
 | `block_min_tx_fee` | Minimum transaction fee for block inclusion (in BTC) | `0.00001` |
-| `debug` | Debug level | `0` |
+| `debug` | Debug level | `1` |
 | `fallback_fee` | Fallback fee (in BTC) | `0.0002` |
 
 ### Development Setup
 
 1. Clone the repository
 2. Install dependencies: `cargo build`
-3. Run tests: `cargo test`
-
-
-
-
-
-
-
+3. Run tests: `cargo test -- --test-threads=1`

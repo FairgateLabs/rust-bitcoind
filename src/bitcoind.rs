@@ -63,7 +63,7 @@ impl Bitcoind {
         rpc_config: RpcConfig,
         flags: BitcoindFlags,
     ) -> Self {
-        Bitcoind {
+        Self {
             docker: Docker::connect_with_local_defaults().unwrap(),
             container_name: container_name.to_string(),
             image: image.to_string(),
