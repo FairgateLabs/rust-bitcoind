@@ -15,7 +15,7 @@ jobs:
     uses: FairgateLabs/rust-bitvmx-workspace/.github/workflows/local_test_template.yml@main
     with:
       fetch-depth: 0
-      repo: 'FairgateLabs/rust-bitcoind'
+      repo: 'FairgateLabs/rust-bitvmx-workspace'
       submodule_path: 'rust-bitcoind'
       cargo_lock_path: 'rust-bitcoind/Cargo.lock'
       target_path: 'rust-bitcoind/target'
