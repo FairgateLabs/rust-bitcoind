@@ -81,3 +81,10 @@ let bitcoind = Bitcoind::new_with_flags("my-node", "ruimarinho/bitcoin-core", rp
 1. Clone the repository
 2. Install dependencies: `cargo build`
 3. Run tests: `cargo test -- --test-threads=1`
+
+## Contributing
+Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+
+## License
+This project is licensed under the MIT License.
+
