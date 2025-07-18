@@ -2,6 +2,11 @@
 
 A Rust library for managing a Bitcoin Core node in a Docker container.
 
+## ⚠️ Disclaimer
+
+This library is currently under development and may not be fully stable.
+It is not production-ready, has not been audited, and future updates may introduce breaking changes without preserving backward compatibility.
+
 ## Features
 - 🚀 Start and manage Bitcoin Core nodes in regtest mode
 - 🐳 Docker container lifecycle management (create, start, stop, cleanup)
