@@ -33,7 +33,7 @@ let rpc_config = RpcConfig {
 };
 
 // Create a new Bitcoin Core instance
-let bitcoind = Bitcoind::new("my-bitcoin-node", "ruimarinho/bitcoin-core", rpc_config)?;
+let bitcoind = Bitcoind::new("my-bitcoin-node", "bitcoin/bitcoin:29.1", rpc_config)?;
 
 // Start the container
 bitcoind.start()?;
@@ -69,7 +69,7 @@ let flags = BitcoindFlags {
     fallback_fee: 0.0002,
 };
 
-let bitcoind = Bitcoind::new_with_flags("my-node", "ruimarinho/bitcoin-core", rpc_config, flags);
+let bitcoind = Bitcoind::new_with_flags("my-node", "bitcoin/bitcoin:29.1", rpc_config, flags);
 ```
 
 ### Bitcoind Flags

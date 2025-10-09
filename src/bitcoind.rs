@@ -270,7 +270,7 @@ mod tests {
 
         let bitcoind = Bitcoind::new(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
+            "bitcoin/bitcoin:29.1",
             rpc_config.clone(),
         );
 
@@ -299,7 +299,7 @@ mod tests {
 
         let bitcoind = Bitcoind::new_with_flags(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
+            "bitcoin/bitcoin:29.1",
             rpc_config.clone(),
             flags,
         );
