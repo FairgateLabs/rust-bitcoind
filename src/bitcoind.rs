@@ -173,7 +173,6 @@ impl Bitcoind {
         info!("Image not found locally. Pulling image: {}", self.image);
         let options = Some(CreateImageOptions {
             from_image: self.image.clone(),
-            tag: "latest".to_string(),
             ..Default::default()
         });
 
