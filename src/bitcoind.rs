@@ -224,8 +224,8 @@ impl Bitcoind {
                 "-printtoconsole".to_string(),
                 "-rpcallowip=0.0.0.0/0".to_string(),
                 "-rpcbind=0.0.0.0".to_string(),
-                format!("-rpcuser={}", self.rpc_config.username).to_string(),
-                format!("-rpcpassword={}", self.rpc_config.password).to_string(),
+                format!("-rpcuser={}", self.rpc_config.username.expose_secret()).to_string(),
+                format!("-rpcpassword={}", self.rpc_config.password.expose_secret()).to_string(),
                 "-server=1".to_string(),
                 "-txindex=1".to_string(),
                 debug,
@@ -253,16 +253,16 @@ impl Bitcoind {
 #[cfg(test)]
 mod tests {
 
-    use bitcoin::Network;
-
     use super::*;
+    use bitcoin::Network;
+    use redact::Secret;
 
     #[test]
     fn test_start_stop_bitcoind() -> Result<(), Error> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };
@@ -282,9 +282,9 @@ mod tests {
     #[test]
     fn test_start_stop_bitcoind_with_flags() -> Result<(), Error> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };

@@ -18,3 +18,4 @@ tracing = "0.1"
 
 [dev-dependencies]
 bitcoin = "0.32.6"
+redact = { version = "0.1", features = ["serde"] }
