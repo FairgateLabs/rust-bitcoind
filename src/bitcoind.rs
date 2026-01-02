@@ -1,18 +1,21 @@
 use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
-use bollard::container::{Config, CreateContainerOptions, RemoveContainerOptions};
+use bollard::query_parameters::{CreateImageOptions, CreateContainerOptions, RemoveContainerOptions};
 use bollard::errors::Error;
-use bollard::image::CreateImageOptions;
+use bollard::container::Config;
 use bollard::models::{ContainerCreateResponse, HostConfig};
 use bollard::Docker;
 use futures_util::stream::StreamExt;
 use std::default::Default;
 use tokio::runtime::Runtime;
-use tracing::{self, info};
+use tracing::{self, debug, error, info};
+
+use crate::error::BitcoindError;
 
 pub struct Bitcoind {
     docker: Docker,
     container_name: String,
     image: String,
+    hash: Option<String>,
     runtime: Runtime,
     rpc_config: RpcConfig,
     flags: BitcoindFlags,
@@ -45,8 +48,8 @@ impl Bitcoind {
     /// * `container_name` - The name of the Docker container.
     /// * `image` - The Docker image to use.
     /// * `rpc_config` - The RPC configuration for the Bitcoin node.
-    pub fn new(container_name: &str, image: &str, rpc_config: RpcConfig) -> Self {
-        Self::new_with_flags(container_name, image, rpc_config, BitcoindFlags::default())
+    pub fn new(container_name: &str, image: &str, hash: Option<String>, rpc_config: RpcConfig) -> Self {
+        Self::new_with_flags(container_name, image, hash, rpc_config, BitcoindFlags::default())
     }
 
     /// Creates a new `Bitcoind` instance with specified flags.
@@ -60,13 +63,20 @@ impl Bitcoind {
     pub fn new_with_flags(
         container_name: &str,
         image: &str,
+        hash: Option<String>,
         rpc_config: RpcConfig,
         flags: BitcoindFlags,
     ) -> Self {
+        let hash = match hash {
+            Some(hash) => Some(format!("{}@{}", image, hash)),
+            None => None,
+        };
+        
         Self {
             docker: Docker::connect_with_local_defaults().unwrap(),
             container_name: container_name.to_string(),
             image: image.to_string(),
+            hash,
             runtime: Runtime::new().unwrap(),
             rpc_config,
             flags,
@@ -83,16 +93,16 @@ impl Bitcoind {
     ///
     /// * `Ok(())` if the container starts successfully.
     /// * `Err(Error)` if there is an error starting the container.
-    pub fn start(&self) -> Result<(), Error> {
+    pub fn start(&self) -> Result<(), BitcoindError> {
         info!("Checking if Docker daemon is active");
         let ping_result = self.runtime.block_on(async { self.docker.ping().await });
 
         if ping_result.is_err() {
-            return Err(Error::DockerResponseNotFoundError {
-                message:
-                    "Docker deamon is not running. Make sure to start it before running this test"
-                        .to_string(),
-            });
+            return Err(BitcoindError::DockerError(
+                Error::DockerResponseServerError { status_code: 500
+                    , message: "Docker deamon is not running. Make sure to start it before running this test".to_string() 
+                }
+            ));
         }
 
         info!("Starting bitcoind container");
@@ -102,7 +112,7 @@ impl Bitcoind {
             let err = self.create_and_start_container().await;
             if let Err(err) = err {
                 //FIX: For some reason checking the list of images is not working, so I handle the error here and retry.
-                if err.to_string().contains("No such image") {
+                if err.to_string().contains("No such image") || err.to_string().contains("Image hash mismatch") {
                     self.pull_image_if_not_present().await?;
                     self.create_and_start_container().await?;
                 } else {
@@ -123,7 +133,7 @@ impl Bitcoind {
     ///
     /// * `Ok(())` if the container stops successfully.
     /// * `Err(Error)` if there is an error stopping the container.
-    pub fn stop(&self) -> Result<(), Error> {
+    pub fn stop(&self) -> Result<(), BitcoindError> {
         info!("Stopping bitcoind container");
         self.runtime.block_on(async {
             self.internal_stop().await?;
@@ -131,7 +141,7 @@ impl Bitcoind {
         })
     }
 
-    async fn internal_stop(&self) -> Result<(), Error> {
+    async fn internal_stop(&self) -> Result<(), BitcoindError> {
         if self.is_running().await? {
             info!("Container was running. Stopping bitcoind container");
             self.docker
@@ -157,7 +167,7 @@ impl Bitcoind {
     async fn is_running(&self) -> Result<bool, Error> {
         let containers = self
             .docker
-            .list_containers(None::<bollard::container::ListContainersOptions<String>>)
+            .list_containers(None::<bollard::query_parameters::ListContainersOptions>)
             .await?;
         for container in containers {
             if let Some(names) = container.names {
@@ -169,11 +179,11 @@ impl Bitcoind {
         Ok(false)
     }
 
-    async fn pull_image_if_not_present(&self) -> Result<(), Error> {
+    async fn pull_image_if_not_present(&self) -> Result<(), BitcoindError> {
         info!("Image not found locally. Pulling image: {}", self.image);
         let options = Some(CreateImageOptions {
-            from_image: self.image.clone(),
-            tag: "latest".to_string(),
+            from_image: Some(self.image.clone()),
+            tag: Some("latest".to_string()),
             ..Default::default()
         });
 
@@ -184,7 +194,20 @@ impl Bitcoind {
                     info!("Progress: {:?}", progress.progress);
                 }
                 Err(error) => {
-                    return Err(error);
+                    return Err(BitcoindError::DockerError(error));
+                }
+            }
+        }
+
+        if let Some(hash) = &self.hash {
+            debug!("Checking if image has hash: {}", hash);
+            let image = self.docker.inspect_image(&self.image).await?;
+            if let Some(digests) = image.repo_digests {
+                if digests.contains(hash) {
+                    info!("Image already has the required hash: {}", hash);
+                } else {
+                    error!("Image does not have the required hash: {}", hash);
+                    return Err(BitcoindError::ImageHashMismatch { expected: hash.clone(), found: digests.join(", ") });
                 }
             }
         }
@@ -192,13 +215,26 @@ impl Bitcoind {
         Ok(())
     }
 
-    async fn create_and_start_container(&self) -> Result<(), Error> {
+    async fn create_and_start_container(&self) -> Result<(), BitcoindError> {
         info!("Creating and starting bitcoind container");
 
         let min_relay_tx_fee = format!("-minrelaytxfee={}", self.flags.min_relay_tx_fee);
         let block_min_tx_fee = format!("-blockmintxfee={}", self.flags.block_min_tx_fee);
         let debug = format!("-debug={}", self.flags.debug);
         let fallback_fee = format!("-fallbackfee={}", self.flags.fallback_fee);
+
+        if let Some(hash) = &self.hash {
+            debug!("Checking if image has hash: {}", hash);
+            let image = self.docker.inspect_image(&self.image).await?;
+            if let Some(digests) = image.repo_digests {
+                if digests.contains(hash) {
+                    info!("Image already has the required hash: {}", hash);
+                } else {
+                    error!("Image does not have the required hash: {}", hash);
+                    return Err(BitcoindError::ImageHashMismatch { expected: hash.clone(), found: digests.join(", ") });
+                }
+            }
+        }
 
         let config = Config {
             image: Some(self.image.clone()),
@@ -238,14 +274,15 @@ impl Bitcoind {
         };
         let ContainerCreateResponse { id, .. } = self
             .docker
-            .create_container::<&str, String>(
+            .create_container(
                 Some(CreateContainerOptions {
-                    name: &self.container_name,
+                    name: Some(self.container_name.clone()),
+                    ..Default::default()
                 }),
                 config,
             )
             .await?;
-        self.docker.start_container::<String>(&id, None).await?;
+        self.docker.start_container(&id, None::<bollard::query_parameters::StartContainerOptions>).await?;
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         Ok(())
     }
@@ -259,7 +296,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_start_stop_bitcoind() -> Result<(), Error> {
+    fn test_start_stop_bitcoind() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
             username: "foo".to_string(),
             password: "rpcpassword".to_string(),
@@ -271,6 +308,7 @@ mod tests {
         let bitcoind = Bitcoind::new(
             "bitcoin-regtest",
             "ruimarinho/bitcoin-core",
+            None,
             rpc_config.clone(),
         );
 
@@ -281,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn test_start_stop_bitcoind_with_flags() -> Result<(), Error> {
+    fn test_start_stop_bitcoind_with_flags() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
             username: "foo".to_string(),
             password: "rpcpassword".to_string(),
@@ -300,12 +338,58 @@ mod tests {
         let bitcoind = Bitcoind::new_with_flags(
             "bitcoin-regtest",
             "ruimarinho/bitcoin-core",
+            None,
             rpc_config.clone(),
             flags,
         );
 
         bitcoind.start()?;
         bitcoind.stop()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_start_stop_bitcoind_with_correct_hash() -> Result<(), BitcoindError> {
+        let rpc_config = RpcConfig {
+            username: "foo".to_string(),
+            password: "rpcpassword".to_string(),
+            url: "http://localhost:18443".to_string(),
+            wallet: "mywallet".to_string(),
+            network: Network::Regtest,
+        };
+
+        let bitcoind = Bitcoind::new(
+            "bitcoin-regtest",
+            "ruimarinho/bitcoin-core",
+            Some("sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
+            rpc_config.clone(),
+        );
+
+        bitcoind.start()?;
+        bitcoind.stop()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_start_bitcoind_with_incorrect_hash() -> Result<(), BitcoindError> {
+        let rpc_config = RpcConfig {
+            username: "foo".to_string(),
+            password: "rpcpassword".to_string(),
+            url: "http://localhost:18443".to_string(),
+            wallet: "mywallet".to_string(),
+            network: Network::Regtest,
+        };
+
+        let bitcoind = Bitcoind::new(
+            "bitcoin-regtest",
+            "ruimarinho/bitcoin-core",
+            Some("sha256:c9dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
+            rpc_config.clone(),
+        );
+
+        assert!(bitcoind.start().is_err());
 
         Ok(())
     }
