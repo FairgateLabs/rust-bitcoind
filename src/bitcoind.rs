@@ -68,7 +68,10 @@ impl Bitcoind {
         flags: BitcoindFlags,
     ) -> Self {
         let hash = match hash {
-            Some(hash) => Some(format!("{}@{}", image, hash)),
+            Some(hash) => {
+                let image_name = image.split(':').next().unwrap_or("");
+                Some(format!("{}@{}", image_name, hash))
+            },
             None => None,
         };
         
@@ -183,7 +186,6 @@ impl Bitcoind {
         info!("Image not found locally. Pulling image: {}", self.image);
         let options = Some(CreateImageOptions {
             from_image: Some(self.image.clone()),
-            tag: Some("latest".to_string()),
             ..Default::default()
         });
 
@@ -261,8 +263,8 @@ impl Bitcoind {
                 "-printtoconsole".to_string(),
                 "-rpcallowip=0.0.0.0/0".to_string(),
                 "-rpcbind=0.0.0.0".to_string(),
-                format!("-rpcuser={}", self.rpc_config.username).to_string(),
-                format!("-rpcpassword={}", self.rpc_config.password).to_string(),
+                format!("-rpcuser={}", self.rpc_config.username.expose_secret()).to_string(),
+                format!("-rpcpassword={}", self.rpc_config.password.expose_secret()).to_string(),
                 "-server=1".to_string(),
                 "-txindex=1".to_string(),
                 debug,
@@ -291,23 +293,23 @@ impl Bitcoind {
 #[cfg(test)]
 mod tests {
 
-    use bitcoin::Network;
-
     use super::*;
+    use bitcoin::Network;
+    use redact::Secret;
 
     #[test]
     fn test_start_stop_bitcoind() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };
 
         let bitcoind = Bitcoind::new(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
+            "bitcoin/bitcoin:29.1",
             None,
             rpc_config.clone(),
         );
@@ -321,9 +323,9 @@ mod tests {
     #[test]
     fn test_start_stop_bitcoind_with_flags() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };
@@ -337,7 +339,7 @@ mod tests {
 
         let bitcoind = Bitcoind::new_with_flags(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
+            "bitcoin/bitcoin:29.1",
             None,
             rpc_config.clone(),
             flags,
@@ -352,17 +354,17 @@ mod tests {
     #[test]
     fn test_start_stop_bitcoind_with_correct_hash() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };
 
         let bitcoind = Bitcoind::new(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
-            Some("sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
+            "bitcoin/bitcoin:29.1",
+            Some("sha256:de62c536feb629bed65395f63afd02e3a7a777a3ec82fbed773d50336a739319".to_string()),
             rpc_config.clone(),
         );
 
@@ -375,17 +377,17 @@ mod tests {
     #[test]
     fn test_start_bitcoind_with_incorrect_hash() -> Result<(), BitcoindError> {
         let rpc_config = RpcConfig {
-            username: "foo".to_string(),
-            password: "rpcpassword".to_string(),
-            url: "http://localhost:18443".to_string(),
+            username: Secret::new("foo".to_string()),
+            password: Secret::new("rpcpassword".to_string()),
+            url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
             network: Network::Regtest,
         };
 
         let bitcoind = Bitcoind::new(
             "bitcoin-regtest",
-            "ruimarinho/bitcoin-core",
-            Some("sha256:c9dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
+            "bitcoin/bitcoin:29.1",
+            Some("sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
             rpc_config.clone(),
         );
 
