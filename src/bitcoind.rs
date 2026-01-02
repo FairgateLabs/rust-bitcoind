@@ -9,6 +9,7 @@ use std::default::Default;
 use tokio::runtime::Runtime;
 use tracing::{self, debug, error, info};
 
+use crate::config::BitcoindConfig;
 use crate::error::BitcoindError;
 
 pub struct Bitcoind {
@@ -41,47 +42,36 @@ impl Default for BitcoindFlags {
 }
 
 impl Bitcoind {
-    /// Creates a new `Bitcoind` instance with default flags.
+    /// Creates a new `Bitcoind` instance.
     ///
     /// # Arguments
     ///
     /// * `container_name` - The name of the Docker container.
     /// * `image` - The Docker image to use.
+    /// * `hash` - Optional hash to verify the Docker image.
     /// * `rpc_config` - The RPC configuration for the Bitcoin node.
-    pub fn new(container_name: &str, image: &str, hash: Option<String>, rpc_config: RpcConfig) -> Self {
-        Self::new_with_flags(container_name, image, hash, rpc_config, BitcoindFlags::default())
-    }
-
-    /// Creates a new `Bitcoind` instance with specified flags.
-    ///
-    /// # Arguments
-    ///
-    /// * `container_name` - The name of the Docker container.
-    /// * `image` - The Docker image to use.
-    /// * `rpc_config` - The RPC configuration for the Bitcoin node.
-    /// * `flags` - Custom flags for the Bitcoin node.
-    pub fn new_with_flags(
-        container_name: &str,
-        image: &str,
-        hash: Option<String>,
-        rpc_config: RpcConfig,
-        flags: BitcoindFlags,
+    /// * `flags` - Optional custom flags for the Bitcoin node.
+    pub fn new(
+        config: BitcoindConfig,
+        flags: Option<BitcoindFlags>,
     ) -> Self {
-        let hash = match hash {
+        let hash = match config.hash {
             Some(hash) => {
-                let image_name = image.split(':').next().unwrap_or("");
+                let image_name = config.image.split(':').next().unwrap_or("");
                 Some(format!("{}@{}", image_name, hash))
             },
             None => None,
         };
-        
+
+        let flags = flags.unwrap_or_else(BitcoindFlags::default);
+
         Self {
             docker: Docker::connect_with_local_defaults().unwrap(),
-            container_name: container_name.to_string(),
-            image: image.to_string(),
+            container_name: config.container_name,
+            image: config.image,
             hash,
             runtime: Runtime::new().unwrap(),
-            rpc_config,
+            rpc_config: config.rpc_config,
             flags,
         }
     }
@@ -307,11 +297,16 @@ mod tests {
             network: Network::Regtest,
         };
 
-        let bitcoind = Bitcoind::new(
-            "bitcoin-regtest",
-            "bitcoin/bitcoin:29.1",
+        let config = BitcoindConfig::new(
+            "bitcoin-regtest".to_string(),
+            "bitcoin/bitcoin:29.1".to_string(),
             None,
             rpc_config.clone(),
+        );
+
+        let bitcoind = Bitcoind::new(
+            config,
+            None,
         );
 
         bitcoind.start()?;
@@ -337,12 +332,16 @@ mod tests {
             fallback_fee: 0.0002,
         };
 
-        let bitcoind = Bitcoind::new_with_flags(
-            "bitcoin-regtest",
-            "bitcoin/bitcoin:29.1",
+        let config = BitcoindConfig::new(
+            "bitcoin-regtest".to_string(),
+            "bitcoin/bitcoin:29.1".to_string(),
             None,
             rpc_config.clone(),
-            flags,
+        );
+
+        let bitcoind = Bitcoind::new(
+            config,
+            Some(flags),
         );
 
         bitcoind.start()?;
@@ -361,11 +360,16 @@ mod tests {
             network: Network::Regtest,
         };
 
-        let bitcoind = Bitcoind::new(
-            "bitcoin-regtest",
-            "bitcoin/bitcoin:29.1",
+        let config = BitcoindConfig::new(
+            "bitcoin-regtest".to_string(),
+            "bitcoin/bitcoin:29.1".to_string(),
             Some("sha256:de62c536feb629bed65395f63afd02e3a7a777a3ec82fbed773d50336a739319".to_string()),
             rpc_config.clone(),
+        );
+
+        let bitcoind = Bitcoind::new(
+            config,
+            None
         );
 
         bitcoind.start()?;
@@ -384,11 +388,16 @@ mod tests {
             network: Network::Regtest,
         };
 
-        let bitcoind = Bitcoind::new(
-            "bitcoin-regtest",
-            "bitcoin/bitcoin:29.1",
+        let config = BitcoindConfig::new(
+            "bitcoin-regtest".to_string(),
+            "bitcoin/bitcoin:29.1".to_string(),
             Some("sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
             rpc_config.clone(),
+        );
+
+        let bitcoind = Bitcoind::new(
+            config,
+            None
         );
 
         assert!(bitcoind.start().is_err());
