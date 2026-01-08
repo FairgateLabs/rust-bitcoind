@@ -1,8 +1,9 @@
 use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
-use bollard::query_parameters::{CreateImageOptions, CreateContainerOptions, RemoveContainerOptions};
 use bollard::errors::Error;
-use bollard::container::Config;
-use bollard::models::{ContainerCreateResponse, HostConfig};
+use bollard::models::{ContainerCreateBody, ContainerCreateResponse, HostConfig};
+use bollard::query_parameters::{
+    CreateContainerOptions, CreateImageOptions, RemoveContainerOptions,
+};
 use bollard::Docker;
 use futures_util::stream::StreamExt;
 use std::default::Default;
@@ -51,15 +52,12 @@ impl Bitcoind {
     /// * `hash` - Optional hash to verify the Docker image.
     /// * `rpc_config` - The RPC configuration for the Bitcoin node.
     /// * `flags` - Optional custom flags for the Bitcoin node.
-    pub fn new(
-        config: BitcoindConfig,
-        flags: Option<BitcoindFlags>,
-    ) -> Self {
+    pub fn new(config: BitcoindConfig, flags: Option<BitcoindFlags>) -> Self {
         let hash = match config.hash {
             Some(hash) => {
                 let image_name = config.image.split(':').next().unwrap_or("");
                 Some(format!("{}@{}", image_name, hash))
-            },
+            }
             None => None,
         };
 
@@ -105,7 +103,9 @@ impl Bitcoind {
             let err = self.create_and_start_container().await;
             if let Err(err) = err {
                 //FIX: For some reason checking the list of images is not working, so I handle the error here and retry.
-                if err.to_string().contains("No such image") || err.to_string().contains("Image hash mismatch") {
+                if err.to_string().contains("No such image")
+                    || err.to_string().contains("Image hash mismatch")
+                {
                     self.pull_image_if_not_present().await?;
                     self.create_and_start_container().await?;
                 } else {
@@ -199,7 +199,10 @@ impl Bitcoind {
                     info!("Image already has the required hash: {}", hash);
                 } else {
                     error!("Image does not have the required hash: {}", hash);
-                    return Err(BitcoindError::ImageHashMismatch { expected: hash.clone(), found: digests.join(", ") });
+                    return Err(BitcoindError::ImageHashMismatch {
+                        expected: hash.clone(),
+                        found: digests.join(", "),
+                    });
                 }
             }
         }
@@ -223,12 +226,15 @@ impl Bitcoind {
                     info!("Image already has the required hash: {}", hash);
                 } else {
                     error!("Image does not have the required hash: {}", hash);
-                    return Err(BitcoindError::ImageHashMismatch { expected: hash.clone(), found: digests.join(", ") });
+                    return Err(BitcoindError::ImageHashMismatch {
+                        expected: hash.clone(),
+                        found: digests.join(", "),
+                    });
                 }
             }
         }
 
-        let config = Config {
+        let config = ContainerCreateBody {
             image: Some(self.image.clone()),
             env: Some(vec!["BITCOIN_DATA=/data".to_string()]),
             host_config: Some(HostConfig {
@@ -274,7 +280,12 @@ impl Bitcoind {
                 config,
             )
             .await?;
-        self.docker.start_container(&id, None::<bollard::query_parameters::StartContainerOptions>).await?;
+        self.docker
+            .start_container(
+                &id,
+                None::<bollard::query_parameters::StartContainerOptions>,
+            )
+            .await?;
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         Ok(())
     }
@@ -304,10 +315,7 @@ mod tests {
             rpc_config.clone(),
         );
 
-        let bitcoind = Bitcoind::new(
-            config,
-            None,
-        );
+        let bitcoind = Bitcoind::new(config, None);
 
         bitcoind.start()?;
         bitcoind.stop()?;
@@ -339,10 +347,7 @@ mod tests {
             rpc_config.clone(),
         );
 
-        let bitcoind = Bitcoind::new(
-            config,
-            Some(flags),
-        );
+        let bitcoind = Bitcoind::new(config, Some(flags));
 
         bitcoind.start()?;
         bitcoind.stop()?;
@@ -363,14 +368,14 @@ mod tests {
         let config = BitcoindConfig::new(
             "bitcoin-regtest".to_string(),
             "bitcoin/bitcoin:29.1".to_string(),
-            Some("sha256:de62c536feb629bed65395f63afd02e3a7a777a3ec82fbed773d50336a739319".to_string()),
+            Some(
+                "sha256:de62c536feb629bed65395f63afd02e3a7a777a3ec82fbed773d50336a739319"
+                    .to_string(),
+            ),
             rpc_config.clone(),
         );
 
-        let bitcoind = Bitcoind::new(
-            config,
-            None
-        );
+        let bitcoind = Bitcoind::new(config, None);
 
         bitcoind.start()?;
         bitcoind.stop()?;
@@ -391,14 +396,14 @@ mod tests {
         let config = BitcoindConfig::new(
             "bitcoin-regtest".to_string(),
             "bitcoin/bitcoin:29.1".to_string(),
-            Some("sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981".to_string()),
+            Some(
+                "sha256:79dd32455cf8c268c63e5d0114cc9882a8857e942b1d17a6b8ec40a6d44e3981"
+                    .to_string(),
+            ),
             rpc_config.clone(),
         );
 
-        let bitcoind = Bitcoind::new(
-            config,
-            None
-        );
+        let bitcoind = Bitcoind::new(config, None);
 
         assert!(bitcoind.start().is_err());
 
