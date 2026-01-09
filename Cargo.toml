@@ -17,6 +17,7 @@ tokio = { version = "1.40.0", features = ["sync", "rt-multi-thread"] }
 tracing = "0.1"
 thiserror = "2.0.12"
 serde = { version = "1.0.205", features = ["derive"] }
+
+[dev-dependencies]
 bitcoin = "0.32.6"
 redact = { version = "0.1", features = ["serde"] }
-
