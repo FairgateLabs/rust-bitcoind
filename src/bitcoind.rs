@@ -29,6 +29,9 @@ pub struct BitcoindFlags {
     pub block_min_tx_fee: f64,
     pub debug: u8,
     pub fallback_fee: f64,
+    /// Maximum mempool size in MB. Default is None (uses bitcoind default of 300 MB).
+    /// Set to a small value (e.g., 5) to limit mempool size for testing.
+    pub maxmempool: Option<u32>,
 }
 
 impl Default for BitcoindFlags {
@@ -38,6 +41,7 @@ impl Default for BitcoindFlags {
             block_min_tx_fee: 0.00001,
             debug: 1,
             fallback_fee: 0.0002,
+            maxmempool: None,
         }
     }
 }
@@ -218,6 +222,7 @@ impl Bitcoind {
         let debug = format!("-debug={}", self.flags.debug);
         let fallback_fee = format!("-fallbackfee={}", self.flags.fallback_fee);
 
+<<<<<<< Updated upstream
         if let Some(hash) = &self.hash {
             debug!("Checking if image has hash: {}", hash);
             let image = self.docker.inspect_image(&self.image).await?;
@@ -235,6 +240,29 @@ impl Bitcoind {
         }
 
         let config = ContainerCreateBody {
+=======
+        let mut cmd_args = vec![
+            "-regtest=1".to_string(),
+            "-printtoconsole".to_string(),
+            "-rpcallowip=0.0.0.0/0".to_string(),
+            "-rpcbind=0.0.0.0".to_string(),
+            format!("-rpcuser={}", self.rpc_config.username.expose_secret()).to_string(),
+            format!("-rpcpassword={}", self.rpc_config.password.expose_secret()).to_string(),
+            "-server=1".to_string(),
+            "-txindex=1".to_string(),
+            debug,
+            min_relay_tx_fee,
+            block_min_tx_fee,
+            fallback_fee,
+        ];
+
+        // Add maxmempool flag if specified
+        if let Some(maxmempool_mb) = self.flags.maxmempool {
+            cmd_args.push(format!("-maxmempool={}", maxmempool_mb));
+        }
+
+        let config = Config {
+>>>>>>> Stashed changes
             image: Some(self.image.clone()),
             env: Some(vec!["BITCOIN_DATA=/data".to_string()]),
             host_config: Some(HostConfig {
@@ -254,20 +282,7 @@ impl Bitcoind {
                 ),
                 ..Default::default()
             }),
-            cmd: Some(vec![
-                "-regtest=1".to_string(),
-                "-printtoconsole".to_string(),
-                "-rpcallowip=0.0.0.0/0".to_string(),
-                "-rpcbind=0.0.0.0".to_string(),
-                format!("-rpcuser={}", self.rpc_config.username.expose_secret()).to_string(),
-                format!("-rpcpassword={}", self.rpc_config.password.expose_secret()).to_string(),
-                "-server=1".to_string(),
-                "-txindex=1".to_string(),
-                debug,
-                min_relay_tx_fee,
-                block_min_tx_fee,
-                fallback_fee,
-            ]),
+            cmd: Some(cmd_args),
             ..Default::default()
         };
         let ContainerCreateResponse { id, .. } = self
@@ -337,6 +352,7 @@ mod tests {
             block_min_tx_fee: 0.00001,
             debug: 1,
             fallback_fee: 0.0002,
+            maxmempool: None,
         };
 
         let config = BitcoindConfig::new(
