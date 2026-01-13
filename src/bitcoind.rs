@@ -56,7 +56,11 @@ impl Bitcoind {
     /// * `hash` - Optional hash to verify the Docker image.
     /// * `rpc_config` - The RPC configuration for the Bitcoin node.
     /// * `flags` - Optional custom flags for the Bitcoin node.
-    pub fn new(bitcoind_config: BitcoindConfig, rpc_config: RpcConfig, flags: Option<BitcoindFlags>) -> Self {
+    pub fn new(
+        bitcoind_config: BitcoindConfig,
+        rpc_config: RpcConfig,
+        flags: Option<BitcoindFlags>,
+    ) -> Self {
         let hash = match bitcoind_config.hash {
             Some(hash) => {
                 let image_name = bitcoind_config.image.split(':').next().unwrap_or("");
@@ -222,7 +226,6 @@ impl Bitcoind {
         let debug = format!("-debug={}", self.flags.debug);
         let fallback_fee = format!("-fallbackfee={}", self.flags.fallback_fee);
 
-<<<<<<< Updated upstream
         if let Some(hash) = &self.hash {
             debug!("Checking if image has hash: {}", hash);
             let image = self.docker.inspect_image(&self.image).await?;
@@ -239,8 +242,6 @@ impl Bitcoind {
             }
         }
 
-        let config = ContainerCreateBody {
-=======
         let mut cmd_args = vec![
             "-regtest=1".to_string(),
             "-printtoconsole".to_string(),
@@ -261,8 +262,7 @@ impl Bitcoind {
             cmd_args.push(format!("-maxmempool={}", maxmempool_mb));
         }
 
-        let config = Config {
->>>>>>> Stashed changes
+        let config = ContainerCreateBody {
             image: Some(self.image.clone()),
             env: Some(vec!["BITCOIN_DATA=/data".to_string()]),
             host_config: Some(HostConfig {
