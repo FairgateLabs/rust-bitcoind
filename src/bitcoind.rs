@@ -320,7 +320,7 @@ mod tests {
             password: Secret::new("rpcpassword".to_string()),
             url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
-            network: Network::Regtest,
+            network_flavor: Network::Regtest.into(),
         };
 
         let config = BitcoindConfig::new(
@@ -344,7 +344,7 @@ mod tests {
             password: Secret::new("rpcpassword".to_string()),
             url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
-            network: Network::Regtest,
+            network_flavor: Network::Regtest.into(),
         };
 
         let flags = BitcoindFlags {
@@ -376,7 +376,7 @@ mod tests {
             password: Secret::new("rpcpassword".to_string()),
             url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
-            network: Network::Regtest,
+            network_flavor: Network::Regtest.into(),
         };
 
         let config = BitcoindConfig::new(
@@ -403,7 +403,7 @@ mod tests {
             password: Secret::new("rpcpassword".to_string()),
             url: Secret::new("http://localhost:18443".to_string()),
             wallet: "mywallet".to_string(),
-            network: Network::Regtest,
+            network_flavor: Network::Regtest.into(),
         };
 
         let config = BitcoindConfig::new(

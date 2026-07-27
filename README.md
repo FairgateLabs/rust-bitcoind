@@ -24,13 +24,15 @@ use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
 use bitcoin::Network;
 
 // Configure RPC settings
-let rpc_config = RpcConfig {
-    username: "bitcoin".to_string(),
-    password: "password".to_string(),
-    url: "http://localhost:18443".to_string(),
-    wallet: "default".to_string(),
-    network: Network::Regtest,
-};
+// Use the constructor: the struct's fields are `Secret`-wrapped, and the network
+// argument accepts a `bitcoin::Network` or a `NetworkFlavor`.
+let rpc_config = RpcConfig::new(
+    Network::Regtest,
+    "http://localhost:18443".to_string(),
+    "bitcoin".to_string(),
+    "password".to_string(),
+    "default".to_string(),
+);
 
 // Create a new Bitcoin Core instance
 let bitcoind = Bitcoind::new("my-bitcoin-node", "bitcoin/bitcoin:29.1", rpc_config)?;
@@ -54,13 +56,15 @@ use bitvmx_bitcoin_rpc::rpc_config::RpcConfig;
 use bitcoin::Network;
 use std::time::Duration;
 
-let rpc_config = RpcConfig {
-    username: "bitcoin".to_string(),
-    password: "password".to_string(),
-    url: "http://localhost:18443".to_string(),
-    wallet: "default".to_string(),
-    network: Network::Regtest,
-};
+// Use the constructor: the struct's fields are `Secret`-wrapped, and the network
+// argument accepts a `bitcoin::Network` or a `NetworkFlavor`.
+let rpc_config = RpcConfig::new(
+    Network::Regtest,
+    "http://localhost:18443".to_string(),
+    "bitcoin".to_string(),
+    "password".to_string(),
+    "default".to_string(),
+);
 
 let flags = BitcoindFlags {
     min_relay_tx_fee: 0.00003,
