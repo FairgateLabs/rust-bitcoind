@@ -191,7 +191,10 @@ impl Bitcoind {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(progress) => {
-                    info!("Progress: {:?}", progress.progress);
+                    info!(
+                        "Image pull progress: status={:?}, detail={:?}",
+                        progress.status, progress.progress_detail
+                    );
                 }
                 Err(error) => {
                     return Err(BitcoindError::DockerError(error));

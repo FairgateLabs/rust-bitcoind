@@ -10,14 +10,14 @@ categories = ["development-tools"]
 readme = "README.md"
 
 [dependencies]
-bollard = "0.19.4"
+bollard = "0.21.1"
 bitvmx-bitcoin-rpc = { git = "https://github.com/FairgateLabs/rust-bitvmx-bitcoin-rpc.git", tag = "v0.8.2" }
 futures-util = "0.3"
-tokio = { version = "1.40.0", features = ["sync", "rt-multi-thread"] }
+tokio = { version = "1.53.1", features = ["sync", "rt-multi-thread"] }
 tracing = "0.1"
-thiserror = "2.0.12"
-serde = { version = "1.0.205", features = ["derive"] }
+thiserror = "2.0.20"
+serde = { version = "1.0.229", features = ["derive"] }
 
 [dev-dependencies]
-bitcoin = "0.32.6"
+bitcoin = "0.32.102"
 redact = { version = "0.1", features = ["serde"] }
