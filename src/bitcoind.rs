@@ -69,7 +69,7 @@ impl Bitcoind {
             None => None,
         };
 
-        let flags = flags.unwrap_or_else(BitcoindFlags::default);
+        let flags = flags.unwrap_or_default();
 
         Self {
             docker: Docker::connect_with_local_defaults().unwrap(),
