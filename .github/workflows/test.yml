@@ -27,4 +27,5 @@ jobs:
       cargo_lock_path: 'rust-bitcoind/Cargo.lock'
       target_path: 'rust-bitcoind/target'
       single_thread_tests: true
+      clippy: true
     secrets: inherit
