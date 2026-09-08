@@ -1,6 +1,6 @@
 [package]
 name = "bitcoind"
-version = "0.8.4"
+version = "0.8.5"
 edition = "2021"
 description = "A Rust library for managing Bitcoin Core nodes in Docker containers"
 license = "MIT"
@@ -10,8 +10,8 @@ categories = ["development-tools"]
 readme = "README.md"
 
 [dependencies]
-bollard = "0.21.1"
-bitvmx-bitcoin-rpc = { git = "https://github.com/FairgateLabs/rust-bitvmx-bitcoin-rpc.git", tag = "v0.8.4" }
+bollard = "0.21.0"
+bitvmx-bitcoin-rpc = { git = "https://github.com/FairgateLabs/rust-bitvmx-bitcoin-rpc.git", tag = "v0.8.5" }
 futures-util = "0.3"
 tokio = { version = "1.53.1", features = ["sync", "rt-multi-thread"] }
 tracing = "0.1"
