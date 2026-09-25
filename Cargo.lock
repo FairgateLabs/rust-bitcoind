@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoind"
-version = "0.8.5"
+version = "0.8.6"
 dependencies = [
  "bitcoin",
  "bitvmx-bitcoin-rpc",
@@ -187,8 +187,8 @@ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 
 [[package]]
 name = "bitvmx-bitcoin-rpc"
-version = "0.8.5"
-source = "git+https://github.com/FairgateLabs/rust-bitvmx-bitcoin-rpc.git?tag=v0.8.5#2b45ad1861a8348f02fe26721df812dc45ca6370"
+version = "0.8.6"
+source = "git+https://github.com/FairgateLabs/rust-bitvmx-bitcoin-rpc.git?tag=v0.8.6#b0fe9e3440c962501957b5dcc068b504b5779eee"
 dependencies = [
  "bitcoin",
  "bitcoincore-rpc",
